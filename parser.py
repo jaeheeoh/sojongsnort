@@ -108,7 +108,7 @@ def regular(s, followsLiteral, start):
 
             #mode modifier
             else:
-                return modemodifier(s[2:idx]) + regular(s[idx+1:], isLiteral, True)
+                return "followed by " + modemodifier(s[2:idx]) + regular(s[idx+1:], isLiteral, True)
 
         #ordinary parenthesis
         else:
@@ -150,7 +150,11 @@ def regular(s, followsLiteral, start):
         s = s[1:]
 
     #check repetition
-    if s.startswith('+'):
+    if s.startswith('?'):
+        isLiteral = False
+        reg = "zero or one " + reg
+        s = s[1:]
+    elif s.startswith('+'):
         isLiteral = False
         if len(s) > 1 and s[1] == '?':
             reg = ("greedy " if ungreedy else "lazy ") + "match of one or more " + reg
@@ -220,9 +224,89 @@ def choice(s):
 
 #handle hexadecimals
 def hexadecimal(s):
-    # need to add few other exceptions such as QUOTATION
-    s = chr(int(s,16))
-    return "hex"+s+" ",False
+    n = int(s,16)
+    if n == 0:
+        return "NUL ", False
+    elif n == 1:
+        return "START OF HEADER ", False
+    elif n == 2:
+        return "START OF TEXT ", False
+    elif n == 3:
+        return "END OF TEXT ", False
+    elif n == 4:
+        return "END OF TRANSMISSION ", False
+    elif n == 5:
+        return "ENQUIRE ", False
+    elif n == 6:
+        return "ACKNOWLEDGE ", False
+    elif n == 7:
+        return "BELL ", False
+    elif n == 8:
+        return "BACKSPACE ", False
+    elif n == 9:
+        return "HORIZONTAL TAB ", False
+    elif n == 10:
+        return "LINE FEED ", False
+    elif n == 11:
+        return "VERTICAL TAB ", False
+    elif n == 12:
+        return "FORM FEED ", False
+    elif n == 13:
+        return "CARRIAGE RETURN ", False
+    elif n == 14:
+        return "SHIFT OUT ", False
+    elif n == 15:
+        return "SHIFT IN ", False
+    elif n == 16:
+        return "DATA LINK ESCAPE ", False
+    elif n == 17:
+        return "DEVICE CONTROL 1/Xon ", False
+    elif n == 18:
+        return "DEVICE CNTROL 2 ", False
+    elif n == 19:
+        return "DEVICE CONTROL 3/Xoff ", False
+    elif n == 20:
+        return "DEVICE CONTROL 4 ", False
+    elif n == 21:
+        return "NEGATIVE ACKNOWLEDGE ", False
+    elif n == 22:
+        return "SYNCHRONOUS IDLE ", False
+    elif n == 23:
+        return "END OF TRANSMISSION BLOCK ", False
+    elif n == 24:
+        return "CANCEL ", False
+    elif n == 25:
+        return "END OF MEDIUM ", False
+    elif n == 26:
+        return "END OF FILE/ SUBSTITUTE ", False
+    elif n == 27:
+        return "ESCAPE ", False
+    elif n == 28:
+        return "FILE SEPARATOR ", False
+    elif n == 29:
+        return "GROUP SEPARATOR ", False
+    elif n == 30:
+        return "RECORD SEPARATOR ", False
+    elif n == 31:
+        return "UNIT SEPERATOR ", False
+    elif n == 34:
+        return "QUOTATION ", False
+    elif n == 39:
+        return "APOSTROPHE ", False
+    elif n == 127:
+        return "DEL ", False
+    else:
+        return "\""+chr(n)+"\" ",True
+    """    elif n == 40:
+            return "(", False
+        elif n == 41:
+            return ")", False
+        elif n == 91:
+            return "[", False
+        elif n == 92:
+            return "\\", False
+        elif n == 93:
+            return "]", False"""
 
 #handle escape characters
 def escape(s):
