@@ -311,28 +311,32 @@ def hexadecimal(s):
 #handle escape characters
 def escape(s):
     if s == 'n':
-        s = 'NEWLINE'
-    elif s== 'r':
-        s = 'CARRIAGE RETURN'
-    elif s== 'd':
-        s = 'DIGIT'
-    elif s== 'D':
-        s = 'NOT DIGIT'
-    elif s== 'w':
-        s = 'WORD'
-    elif s== 'W':
-        s = 'NOT WORD'
-    elif s== 's':
-        s = 'WHITESPACE'
-    elif s== 'S':
-        s = 'NOT WHITESPACE'
-    elif s== '\'':
-        s = 'APOSTROPHE'
-    elif s== '\"':
-        s = 'QUOTATION'
-    elif s== 't':
-        s = 'TAB'
-    return "\""+s+"\" ",True
+        s = 'NEWLINE '
+    elif s == 'r':
+        s = 'CARRIAGE RETURN '
+    elif s == 'd':
+        s = 'DIGIT '
+    elif s == 'D':
+        s = 'NON-DIGIT '
+    elif s == 'w':
+        s = 'WORD '
+    elif s == 'W':
+        s = 'NON-WORD '
+    elif s == 's':
+        s = 'WHITESPACE '
+    elif s == 'S':
+        s = 'NON-WHITESPACE '
+    elif s == '\'':
+        s = 'APOSTROPHE '
+    elif s == '\"':
+        s = 'QUOTATION '
+    elif s == 't':
+        s = 'TAB '
+    elif s == '.':
+        s = "any character" + (" " if dot else "excluding NEWLINE ")
+    else:
+        return "\"" + s + "\" ", True
+    return s, False
 
 #mode modifiers
 def modemodifier(s):
