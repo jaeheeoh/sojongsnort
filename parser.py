@@ -14,8 +14,6 @@ unnormalizedbody = False
 error = False
 output = ""
 
-with open("input.txt") as f:
-    pcre = f.readline()
 
 # enable flags
 def flags(s):
@@ -27,28 +25,34 @@ def flags(s):
         error = True
 
     flags = s[l:]
+    if not flags:
+        error = False
+    for alpha in flags:
+        if not 's' and 'm' and 'i' and 'g' and 'U' and 'A' and 'E' and 'R' and 'O' and 'H' and 'P' in flags:
+            error = True
     if 's' in flags:
         dot = True
-    if 'm' in flags:
+    elif 'm' in flags:
         multiline = True
-    if 'i' in flags:
+    elif 'i' in flags:
         nocase = True
-    if 'g' in flags:
+    elif 'g' in flags:
         findall = True
-    if 'U' in flags:
+    elif 'U' in flags:
         ungreedy = True
-    if 'E' in flags:
-        if multiline  == False :
+    elif 'A' in flags:
+        starting = True
+    elif 'E' in flags:
+        if multiline == False:
             ending = True
-    if 'R' in flags:
+    elif 'R' in flags:
         distance0 = True
-    if 'O' in flags:
+    elif 'O' in flags:
         ignorelimit = True
-    if 'H' in flags:
+    elif 'H' in flags:
         normalizedheader = True
-    if 'P' in flags:
+    elif 'P' in flags:
         unnormalizedbody = True
-    
     s = s[1:l]
 
     if s.startswith("^"):
@@ -60,15 +64,16 @@ def flags(s):
         s = s[:-1]
     return s
 
-#read expression
+
+# read expression
 def regular(s, followsLiteral, start):
-    print(s)
+    #print(s)
     reg = ""
     isLiteral = False
     if len(s) == 0:
         return ""
 
-    #if parenthesis
+    # if parenthesis
     if s.startswith("("):
         # find index of matching closing parenthesis
         found = 1
@@ -76,46 +81,46 @@ def regular(s, followsLiteral, start):
         legit = True
         while (found != 0):
             idx += 1
-            if legit and s[idx-1] != '\\':
-                if s[idx]==')':
+            if legit and s[idx - 1] != '\\':
+                if s[idx] == ')':
                     found -= 1
-                if s[idx]=='(':
+                if s[idx] == '(':
                     found += 1
             if s[idx] == '[':
                 legit = False
             if s[idx] == ']':
                 legit = True
 
-        #capture groups and mode modifier
+        # capture groups and mode modifier
         if s[1] == '?':
-            #named group
+            # named group
             if s[2] == 'P':
-                if s[3]=='<':
+                if s[3] == '<':
                     n = s.find('>')
-                    reg = "( " + regular(s[n+1:idx], isLiteral, True) + ") named <"+s[4:n]+"> "
+                    reg = "( " + regular(s[n + 1:idx], isLiteral, True) + ") named <" + s[4:n] + "> "
                 elif s[3] == '=':
-                    reg = "<"+s[4:idx]+"> "
+                    reg = "<" + s[4:idx] + "> "
 
-            #capturing group
-            elif s[2]==':' or s[2]=='=' or s[2]=='!':
-                if s[2]==':':
+            # capturing group
+            elif s[2] == ':' or s[2] == '=' or s[2] == '!':
+                if s[2] == ':':
                     capture = "non-capturing "
-                if s[2]=='=':
+                if s[2] == '=':
                     capture = "positive lookahead of "
-                if s[2]=='!':
+                if s[2] == '!':
                     capture = "negative lookahead of "
                 reg = capture + "( " + regular(s[3:idx], isLiteral, True) + ") "
 
-            #mode modifier
+            # mode modifier
             else:
-                return "followed by " + modemodifier(s[2:idx]) + regular(s[idx+1:], isLiteral, True)
+                return "followed by " + modemodifier(s[2:idx]) + regular(s[idx + 1:], isLiteral, True)
 
-        #ordinary parenthesis
+        # ordinary parenthesis
         else:
             reg = "( " + regular(s[1:idx], isLiteral, True) + ") "
         s = s[idx + 1:]
 
-    #if choice brackets
+    # if choice brackets
     elif s.startswith("["):
         idx = s.find(']')
         ex = s[1] == '^'
@@ -125,31 +130,31 @@ def regular(s, followsLiteral, start):
             reg = "token(s) from [" + choice(s[1:idx]) + "] "
         s = s[idx + 1:]
 
-    #if escape characters
+    # if escape characters
     elif s.startswith("\\"):
         if s[1] == 'x':
             if s[2] == '{':
                 reg, isLiteral = hexadecimal(s[3:5])
-                s=s[6:]
+                s = s[6:]
             else:
                 reg, isLiteral = hexadecimal(s[2:4])
-                s=s[4:]
+                s = s[4:]
         else:
             reg, isLiteral = escape(s[1])
             s = s[2:]
 
-    #else read single character
+    # else read single character
     else:
-        if s[0]=='|':
+        if s[0] == '|':
             reg = "or "
         elif s[0] == '.':
-            reg = "any character " + (""if dot else "excluding NEWLINE ")
+            reg = "any character " + ("" if dot else "excluding NEWLINE ")
         else:
             isLiteral = True
             reg = "\"" + s[0] + "\" "
         s = s[1:]
 
-    #check repetition
+    # check repetition
     if s.startswith('?'):
         isLiteral = False
         reg = "zero or one " + reg
@@ -175,56 +180,58 @@ def regular(s, followsLiteral, start):
         idx = s.find("}")
         com = s.find(",")
         p = re.compile('{\d+(,\d*)?}')
-        if not p.match(s[0:idx+1]):
-            reg = reg + "followed by \"" + s[0: idx+1] + "\""
+        if not p.match(s[0:idx + 1]):
+            reg = reg + "followed by \"" + s[0: idx + 1] + "\""
         else:
             num = ""
-            #{num}
+            # {num}
             if com == -1 or com > idx:
                 num = s[1:idx] + " "
-            #{num, }
+            # {num, }
             elif idx - com == 1:
                 num = s[1:com] + " or more "
-            #{num, num}
+            # {num, num}
             else:
-                num = s[1:com] + " to " + s[com+1:idx] + " "
+                num = s[1:com] + " to " + s[com + 1:idx] + " "
             reg = num + reg
-        s = s[idx+1:]
+        s = s[idx + 1:]
 
-    #return result
+    # return result
     if start:
         return reg + regular(s, isLiteral, False)
     if followsLiteral and isLiteral:
         return "BeTwEeN " + reg + regular(s, isLiteral, False)
     return "followed by " + reg + regular(s, isLiteral, False)
 
-#handle choice brackets
+
+# handle choice brackets
 def choice(s):
-    if len(s)==0:
+    if len(s) == 0:
         return ""
     to = False
-    output=""
-    if s[0]=="\\":
+    output = ""
+    if s[0] == "\\":
         if s[1] == 'x':
             output, b = hexadecimal(s[2:4])
-            s=s[4:]
+            s = s[4:]
         else:
             output, b = escape(s[1])
-            s=s[2:]
+            s = s[2:]
     elif s[0] == '-' and len(s) != 1:
         to = True
         output = " to "
-        s=s[1:]
+        s = s[1:]
     else:
-        output = "\""+s[0]+"\""
-        s=s[1:]
-    if len(s) > 0 and not to and (not s.startswith('-') or s=="-"):
+        output = "\"" + s[0] + "\""
+        s = s[1:]
+    if len(s) > 0 and not to and (not s.startswith('-') or s == "-"):
         output += " and "
     return output + choice(s)
 
-#handle hexadecimals
+
+# handle hexadecimals
 def hexadecimal(s):
-    n = int(s,16)
+    n = int(s, 16)
     if n == 0:
         return "NUL ", False
     elif n == 1:
@@ -296,7 +303,7 @@ def hexadecimal(s):
     elif n == 127:
         return "DEL ", False
     else:
-        return "\""+chr(n)+"\" ",True
+        return "\"" + chr(n) + "\" ", True
     """    elif n == 40:
             return "(", False
         elif n == 41:
@@ -308,7 +315,8 @@ def hexadecimal(s):
         elif n == 93:
             return "]", False"""
 
-#handle escape characters
+
+# handle escape characters
 def escape(s):
     if s == 'n':
         s = 'NEWLINE '
@@ -338,72 +346,99 @@ def escape(s):
         return "\"" + s + "\" ", True
     return s, False
 
-#mode modifiers
+
+# mode modifiers
 def modemodifier(s):
-    global dot
-    modifiers = {'i':0,'s':0,'m':0,'x':0,'J':0,'U':0}
+    global dot, error
+    error = True
+    modifiers = {'i': 0, 's': 0, 'm': 0, 'x': 0, 'J': 0, 'U': 0}
     off = False
     output = ""
-
     for c in s:
-        if c=='-':
+        if c == '-':
             off = True
         else:
             modifiers[c] = 2 if off else 1
-    if modifiers['i']!=0:
-        output += ("case insensitive, " if modifiers['i']==1 else "case sensitive, ")
-    if modifiers['s']!=0:
-        dot = modifiers['s']==1
-    if modifiers['m']!=0:
-        output += ("line scope, " if modifiers['m']==1 else "string scope, ")
-    if modifiers['x']!=0:
-        output += ("ignoring literal whitespace, " if modifiers['x']==1 else "not ignoring literal whitespace, ")
-    if modifiers['J']!=0:
-        output += ("allowing duplicate names, " if modifiers['J']==1 else "no duplicate names, ")
-    if modifiers['U']!=0:
-        output += ("lazy, " if modifiers['U']==1 else "greedy, ")
+    for c in s:
+        if c == '-' or c == 'i' or c == 's' or c == 'm' or c == 'x' or c == 'J' or c == 'U':
+            error = False
+        else:
+            error = True
+            break
+    if modifiers['i'] != 0:
+        output += ("case insensitive, " if modifiers['i'] == 1 else "case sensitive, ")
+    if modifiers['s'] != 0:
+        dot = modifiers['s'] == 1
+    if modifiers['m'] != 0:
+        output += ("line scope, " if modifiers['m'] == 1 else "string scope, ")
+    if modifiers['x'] != 0:
+        output += ("ignoring literal whitespace, " if modifiers['x'] == 1 else "not ignoring literal whitespace, ")
+    if modifiers['J'] != 0:
+        output += ("allowing duplicate names, " if modifiers['J'] == 1 else "no duplicate names, ")
+    if modifiers['U'] != 0:
+        output += ("lazy, " if modifiers['U'] == 1 else "greedy, ")
     return "(" + output[:-2] + " from here) "
 
-regex = flags(pcre)
 
-output = regular(regex, False, True)
+with open("input.txt", "r+") as f:
+    for line in f.readlines():
+        #reset flags
+        nocase = False
+        multiline = False
+        dot = False
+        ungreedy = False
+        findall = False
+        starting = False
+        ending = False
+        distance0 = False
+        ignorelimit = False
+        normalizedheader = False
+        unnormalizedbody = False
+        error = False
+        output = ""
+        pcre = line
+        #pcre = f.readline()
 
-excess = '" BeTwEeN "'
-fb = output.find(excess)
-while fb != -1:
-    output = output[0:fb] + output[fb+len(excess):]
-    fb = output.find(excess)
+        regex = flags(pcre)
 
-excess = "followed by or followed by"
-fb = output.find(excess)
-while fb != -1:
-    output = output[0:fb] + "or" + output[fb+len(excess):]
-    fb = output.find(excess)
+        output = regular(regex, False, True)
 
-begin = "starting with "
-if starting and ending:
-    begin += "and ending with "
-elif ending:
-    begin = "ending with "
-if starting or ending:
-    if multiline:
-        begin = "line " + begin
-    else:
-        begin = "string " + begin
-else:
-    begin = "substring " + begin
-output = begin + ": " + output
+        excess = '" BeTwEeN "'
+        fb = output.find(excess)
+        while fb != -1:
+            output = output[0:fb] + output[fb + len(excess):]
+            fb = output.find(excess)
 
-if nocase or findall or ungreedy:
-    output = "search of " + output
-    if nocase:
-        output = "case insensitive " + output
-    if ungreedy:
-        output = "ungreedy " + output
-    if findall:
-        output = "global " + output
+        excess = "followed by or followed by"
+        fb = output.find(excess)
+        while fb != -1:
+            output = output[0:fb] + "or" + output[fb + len(excess):]
+            fb = output.find(excess)
 
-if not error:
-    print(output)
-else:
-    print("ERROR")
+        begin = "starting with "
+        if starting and ending:
+            begin += "and ending with "
+        elif ending:
+            begin = "ending with "
+        if starting or ending:
+            if multiline:
+                begin = "line " + begin
+            else:
+                begin = "string " + begin
+        else:
+            begin = "substring " + begin
+        output = begin + ": " + output
+
+        if nocase or findall or ungreedy:
+            output = "search of " + output
+            if nocase:
+                output = "case insensitive " + output
+            if ungreedy:
+                output = "ungreedy " + output
+            if findall:
+                output = "global " + output
+
+        if not error:
+            print(output)
+        else:
+            print("ERROR")
