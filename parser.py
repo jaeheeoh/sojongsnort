@@ -1,4 +1,5 @@
 import re
+import string
 
 nocase = False
 multiline = False
@@ -24,34 +25,33 @@ def flags(s):
     if l < 1:
         error = True
 
-    flags = s[l:]
-    if not flags:
-        error = False
-    for alpha in flags:
-        if not 's' and 'm' and 'i' and 'g' and 'U' and 'A' and 'E' and 'R' and 'O' and 'H' and 'P' in flags:
-            error = True
+    flags = s[l+1:].strip()
+    if len(flags) > 0 and not all(f in 'smigUAEROHP' for f in flags):
+        print(len(flags))
+        error = True
+
     if 's' in flags:
         dot = True
-    elif 'm' in flags:
+    if 'm' in flags:
         multiline = True
-    elif 'i' in flags:
+    if 'i' in flags:
         nocase = True
-    elif 'g' in flags:
+    if 'g' in flags:
         findall = True
-    elif 'U' in flags:
+    if 'U' in flags:
         ungreedy = True
-    elif 'A' in flags:
+    if 'A' in flags:
         starting = True
-    elif 'E' in flags:
+    if 'E' in flags:
         if multiline == False:
             ending = True
-    elif 'R' in flags:
+    if 'R' in flags:
         distance0 = True
-    elif 'O' in flags:
+    if 'O' in flags:
         ignorelimit = True
-    elif 'H' in flags:
+    if 'H' in flags:
         normalizedheader = True
-    elif 'P' in flags:
+    if 'P' in flags:
         unnormalizedbody = True
     s = s[1:l]
 
@@ -67,7 +67,7 @@ def flags(s):
 
 # read expression
 def regular(s, followsLiteral, start):
-    #print(s)
+    print(s)
     reg = ""
     isLiteral = False
     if len(s) == 0:
@@ -102,14 +102,17 @@ def regular(s, followsLiteral, start):
                     reg = "<" + s[4:idx] + "> "
 
             # capturing group
-            elif s[2] == ':' or s[2] == '=' or s[2] == '!':
+            elif s[2] in ':<=!':
+                i = 2
                 if s[2] == ':':
                     capture = "non-capturing "
-                if s[2] == '=':
-                    capture = "positive lookahead of "
-                if s[2] == '!':
-                    capture = "negative lookahead of "
-                reg = capture + "( " + regular(s[3:idx], isLiteral, True) + ") "
+                if s[2] == '<':
+                    i = 3
+                if s[i] == '=':
+                    capture = "positive look" + ("ahead of " if i == 2 else "behind of ")
+                if s[i] == '!':
+                    capture = "negative look" + ("ahead of " if i == 2 else "behind of ")
+                reg = capture + "( " + regular(s[i + 1:idx], isLiteral, True) + ") "
 
             # mode modifier
             else:
@@ -123,7 +126,7 @@ def regular(s, followsLiteral, start):
     # if choice brackets
     elif s.startswith("["):
         idx = s.find(']')
-        if(s[idx-1]=='\\'):   # if ] is escaped, case like /[^\]]/
+        while s[idx-1]=='\\':
             idx = s.find(']', idx+1)
         ex = s[1] == '^'
         if ex:
@@ -136,14 +139,11 @@ def regular(s, followsLiteral, start):
     elif s.startswith("\\"):
         if s[1] == 'x':
             if s[2] == '{':
-                if(s[4]== 0-9 or s[4]== 'A'or s[4]== 'a' or s[4]== 'B'or s[4]== 'b'or s[4]== 'C'or s[4]== 'c'or s[4]== 'D'or s[4]== 'd'or s[4]== 'E'or s[4]== 'e'or s[4]== 'F'or s[4]== 'f'):
-                    reg, isLiteral = hexadecimal(s[3:5])
-                    s = s[6:]
-                else:
-                    reg, isLiteral = hexadecimal(s[3:4])
-                    s = s[5:]
+                idx = s.find('}')
+                reg, isLiteral = hexadecimal(s[3:idx])
+                s = s[idx+1:]
             else:
-                if(s[3]== 0-9 or s[3]== 'A' or s[3]== 'a'or s[3]== 'B' or s[3]== 'b'or s[3]== 'C' or s[3]== 'c'or s[3]== 'D' or s[3]== 'd'or s[3]== 'E' or s[3]== 'e'or s[3]== 'F' or s[3]== 'f'):
+                if s[3] in string.hexdigits:
                     reg, isLiteral = hexadecimal(s[2:4])
                     s = s[4:]
                 else:
@@ -222,12 +222,17 @@ def choice(s):
     output = ""
     if s[0] == "\\":
         if s[1] == 'x':
-            if(s[3]==0-9 or s[3]=='A' or s[3]=='a'or s[3]=='B' or s[3]=='b'or s[3]=='C' or s[3]=='c'or s[3]=='D' or s[3]=='d'or s[3]=='E' or s[3]=='e'or s[3]=='F' or s[3]=='f'):
-                output, b = hexadecimal(s[2:4])
-                s = s[4:]
+            if s[2] == '{':
+                idx = s.find('}')
+                output, b = hexadecimal(s[3:idx])
+                s = s[idx+1:]
             else:
-                output, b = hexadecimal(s[2:3])
-                s = s[3:]
+                if s[3] in string.hexdigits:
+                    output, b = hexadecimal(s[2:4])
+                    s = s[4:]
+                else:
+                    output, b = hexadecimal(s[2:3])
+                    s = s[3:]
         else:
             output, b = escape(s[1])
             s = s[2:]
@@ -364,7 +369,6 @@ def escape(s):
 # mode modifiers
 def modemodifier(s):
     global dot, error
-    error = True
     modifiers = {'i': 0, 's': 0, 'm': 0, 'x': 0, 'J': 0, 'U': 0}
     off = False
     output = ""
@@ -373,10 +377,7 @@ def modemodifier(s):
             off = True
         else:
             modifiers[c] = 2 if off else 1
-    for c in s:
-        if c == '-' or c == 'i' or c == 's' or c == 'm' or c == 'x' or c == 'J' or c == 'U':
-            error = False
-        else:
+        if c not in '-ismxJU':
             error = True
             break
     if modifiers['i'] != 0:
@@ -410,24 +411,14 @@ with open("input.txt", "r+") as f:
         unnormalizedbody = False
         error = False
         output = ""
-        pcre = line
-        #pcre = f.readline()
 
-        regex = flags(pcre)
+        regex = flags(line)
 
         output = regular(regex, False, True)
 
-        excess = '" BeTwEeN "'
-        fb = output.find(excess)
-        while fb != -1:
-            output = output[0:fb] + output[fb + len(excess):]
-            fb = output.find(excess)
-
-        excess = "followed by or followed by"
-        fb = output.find(excess)
-        while fb != -1:
-            output = output[0:fb] + "or" + output[fb + len(excess):]
-            fb = output.find(excess)
+        #remove excess
+        output = output.replace('" BeTwEeN "', "")
+        output = output.replace("followed by or followed by", "or")
 
         begin = "starting with "
         if starting and ending:
@@ -448,7 +439,7 @@ with open("input.txt", "r+") as f:
             if nocase:
                 output = "case insensitive " + output
             if ungreedy:
-                output = "ungreedy " + output
+                output = "lazy " + output
             if findall:
                 output = "global " + output
 
