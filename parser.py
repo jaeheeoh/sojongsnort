@@ -19,6 +19,7 @@ output = ""
 # enable flags
 def flags(s):
     global nocase, multiline, dot, ungreedy, findall, starting, ending, distance0, ignorelimit, normalizedheader, unnormalizedbody, error
+    print(s)
     if s[0] != '/':
         error = True
     l = s.rfind('/')
