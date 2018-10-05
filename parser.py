@@ -72,6 +72,8 @@ def regular(s, followsLiteral, start):
         while (found != 0):
             idx += 1
             if legit and s[idx - 1] != '\\':
+                if s[idx] == '\\':
+                    idx+=1
                 if s[idx] == ')':
                     found -= 1
                 if s[idx] == '(':
