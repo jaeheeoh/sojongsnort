@@ -6,8 +6,6 @@ multiline = False
 dot = False
 ungreedy = False
 findall = False
-starting = False
-ending = False
 distance0 = False
 ignorelimit = False
 normalizedheader = False
@@ -19,7 +17,6 @@ output = ""
 # enable flags
 def flags(s):
     global nocase, multiline, dot, ungreedy, findall, starting, ending, distance0, ignorelimit, normalizedheader, unnormalizedbody, error
-    print(s)
     if s[0] != '/':
         error = True
     l = s.rfind('/')
@@ -55,20 +52,12 @@ def flags(s):
     if 'P' in flags:
         unnormalizedbody = True
     s = s[1:l]
-
-    if s.startswith("^"):
-        starting = True
-        s = s[1:]
-
-    if s.endswith("$"):
-        ending = True
-        s = s[:-1]
     return s
 
 
 # read expression
 def regular(s, followsLiteral, start):
-    print(s)
+    #print(s)
     reg = ""
     isLiteral = False
     if len(s) == 0:
@@ -101,7 +90,9 @@ def regular(s, followsLiteral, start):
                     reg = "( " + regular(s[n + 1:idx], isLiteral, True) + ") named <" + s[4:n] + "> "
                 elif s[3] == '=':
                     reg = "<" + s[4:idx] + "> "
-
+            # atomic group
+            elif s[2] == '>':
+                reg = "atomic group of ( " + regular(s[3:idx],isLiteral,True) + ") "
             # capturing group
             elif s[2] in ':<=!':
                 i = 2
@@ -109,11 +100,12 @@ def regular(s, followsLiteral, start):
                     capture = "non-capturing "
                 if s[2] == '<':
                     i = 3
-                if s[i] == '=':
-                    capture = "positive look" + ("ahead of " if i == 2 else "behind of ")
-                if s[i] == '!':
-                    capture = "negative look" + ("ahead of " if i == 2 else "behind of ")
-                reg = capture + "( " + regular(s[i + 1:idx], isLiteral, True) + ") "
+                if s[i] in '=!':
+                    capture = ("positive" if s[i] == '=' else "negative")  + " look" + ("ahead of " if i == 2 else "behind of ")
+                    reg = capture + "( " + regular(s[i + 1:idx], isLiteral, True) + ") "
+                elif i == 3:
+                    n = s.find('>')
+                    reg = "( " + regular(s[n + 1:idx], isLiteral, True) + ") named <" + s[3:n] + "> "
 
             # mode modifier
             else:
@@ -160,6 +152,10 @@ def regular(s, followsLiteral, start):
             reg = "or "
         elif s[0] == '.':
             reg = "any character " + ("" if dot else "excluding NEWLINE ")
+        elif s[0] == '^':
+            reg = "start of " + ("line " if multiline else "string ")
+        elif s[0] == '$':
+            reg = "end of " + ("line " if multiline else "string ")
         else:
             isLiteral = True
             reg = "\"" + s[0] + "\" "
@@ -237,6 +233,7 @@ def choice(s):
         else:
             output, b = escape(s[1])
             s = s[2:]
+        output = output[:-1]
     elif s[0] == '-' and len(s) != 1:
         to = True
         output = " to "
@@ -369,7 +366,7 @@ def escape(s):
 
 # mode modifiers
 def modemodifier(s):
-    global dot, error
+    global dot, error, multiline
     modifiers = {'i': 0, 's': 0, 'm': 0, 'x': 0, 'J': 0, 'U': 0}
     off = False
     output = ""
@@ -386,13 +383,15 @@ def modemodifier(s):
     if modifiers['s'] != 0:
         dot = modifiers['s'] == 1
     if modifiers['m'] != 0:
-        output += ("line scope, " if modifiers['m'] == 1 else "string scope, ")
+        multiline = modifiers['m'] == 1
     if modifiers['x'] != 0:
         output += ("ignoring literal whitespace, " if modifiers['x'] == 1 else "not ignoring literal whitespace, ")
     if modifiers['J'] != 0:
         output += ("allowing duplicate names, " if modifiers['J'] == 1 else "no duplicate names, ")
     if modifiers['U'] != 0:
         output += ("lazy, " if modifiers['U'] == 1 else "greedy, ")
+    if len(output)<2:
+        return output
     return "(" + output[:-2] + " from here) "
 
 
@@ -421,22 +420,8 @@ with open("input.txt", "r+") as f:
         output = output.replace('" BeTwEeN "', "")
         output = output.replace("followed by or followed by", "or")
 
-        begin = "starting with "
-        if starting and ending:
-            begin += "and ending with "
-        elif ending:
-            begin = "ending with "
-        if starting or ending:
-            if multiline:
-                begin = "line " + begin
-            else:
-                begin = "string " + begin
-        else:
-            begin = "substring " + begin
-        output = begin + ": " + output
-
+        output = "search of: " + output
         if nocase or findall or ungreedy:
-            output = "search of " + output
             if nocase:
                 output = "case insensitive " + output
             if ungreedy:
