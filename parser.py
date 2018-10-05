@@ -71,9 +71,7 @@ def regular(s, followsLiteral, start):
         legit = True
         while (found != 0):
             idx += 1
-            if legit and s[idx - 1] != '\\':
-                if s[idx] == '\\':
-                    idx+=1
+            if legit and (s[idx - 1] != '\\' or s[idx-2:idx] == '\\\\'):
                 if s[idx] == ')':
                     found -= 1
                 if s[idx] == '(':
@@ -122,6 +120,8 @@ def regular(s, followsLiteral, start):
     elif s.startswith("["):
         idx = s.find(']')
         while s[idx-1]=='\\':
+            if s[idx-2]=='\\':
+                break
             idx = s.find(']', idx+1)
         ex = s[1] == '^'
         if ex:
