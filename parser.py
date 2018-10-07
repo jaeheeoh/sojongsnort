@@ -71,9 +71,7 @@ def regular(s, followsLiteral, start):
         legit = True
         while (found != 0):
             idx += 1
-            if legit and s[idx - 1] != '\\':
-                if s[idx] == '\\':
-                    idx+=1
+            if legit and (s[idx-1] != '\\' or s[idx-2:idx] == '\\\\'): #cannot catch (\\\)) but there seems no pcre as the mentioned one
                 if s[idx] == ')':
                     found -= 1
                 if s[idx] == '(':
@@ -122,6 +120,8 @@ def regular(s, followsLiteral, start):
     elif s.startswith("["):
         idx = s.find(']')
         while s[idx-1]=='\\':
+            if s[idx-2]=='\\': # should occur same problem, cannot catch [\\\]] but this also seems to be not found in our pcre file
+                break
             idx = s.find(']', idx+1)
         ex = s[1] == '^'
         if ex:
@@ -132,18 +132,22 @@ def regular(s, followsLiteral, start):
 
     # if escape characters
     elif s.startswith("\\"):
-        if s[1] == 'x':
+        if s[1] == 'x' and len(s) > 2: # need to consider pcre such as /\x/i -> NUL
             if s[2] == '{':
                 idx = s.find('}')
                 reg, isLiteral = hexadecimal(s[3:idx])
                 s = s[idx+1:]
             else:
-                if s[3] in string.hexdigits:
+                if len(s) > 3 and s[3] in string.hexdigits: # need to consider /\x(single digit)/i
                     reg, isLiteral = hexadecimal(s[2:4])
                     s = s[4:]
-                else:
+                elif s[2] in string.hexdigits:
                     reg, isLiteral = hexadecimal(s[2:3])
                     s = s[3:]
+                else:
+                    #need to consider pcre such as /\x[abc]/i
+                    reg, isLiteral = hexadecimal("0")
+                    s=s[2:]
         else:
             reg, isLiteral = escape(s[1])
             s = s[2:]
@@ -220,18 +224,21 @@ def choice(s):
     to = False
     output = ""
     if s[0] == "\\":
-        if s[1] == 'x':
+        if s[1] == 'x' and len(s) > 2:
             if s[2] == '{':
                 idx = s.find('}')
                 output, b = hexadecimal(s[3:idx])
                 s = s[idx+1:]
             else:
-                if s[3] in string.hexdigits:
+                if len(s) > 3 and s[3] in string.hexdigits:
                     output, b = hexadecimal(s[2:4])
                     s = s[4:]
-                else:
+                elif s[2] in string.hexadigits:
                     output, b = hexadecimal(s[2:3])
                     s = s[3:]
+                else:
+                    output, b = hexadecimal("0")
+                    s = s[2:]
         else:
             output, b = escape(s[1])
             s = s[2:]
